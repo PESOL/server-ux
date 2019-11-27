@@ -3,11 +3,8 @@ odoo.define('base_tier_validation.ReviewField', function (require) {
 
     var AbstractField = require('web.AbstractField');
     var core = require('web.core');
-    var session = require('web.session');
     var field_registry = require('web.field_registry');
-    var Widget = require('web.Widget');
 
-    var _t = core._t;
     var QWeb = core.qweb;
 
     var ReviewField = AbstractField.extend({
@@ -15,17 +12,19 @@ odoo.define('base_tier_validation.ReviewField', function (require) {
         events: {
             'click .o_info_btn': '_onButtonClicked',
             'show.bs.collapse': '_showCollapse',
-            'hide.bs.collapse': '_hideCollapse'
+            'hide.bs.collapse': '_hideCollapse',
         },
         start: function () {
             var self = this;
             self._renderDropdown();
         },
+
         /**
          * Make RPC and get current user's activity details
          * @private
          */
-        _getReviewData: function(res_ids){
+
+        _getReviewData: function (res_ids) {
             var self = this;
 
             return this._rpc({
@@ -38,10 +37,11 @@ odoo.define('base_tier_validation.ReviewField', function (require) {
         },
         _renderDropdown: function () {
             var self = this;
-            return this._getReviewData(self.value).then(function (){
-                self.$('.o_review').html(QWeb.render("tier.review.ReviewsTable", {
-                    reviews : self.reviews
-                }));
+            return this._getReviewData(self.value).then(function () {
+                self.$('.o_review').html(
+                    QWeb.render("tier.review.ReviewsTable", {
+                        reviews : self.reviews,
+                    }));
             });
         },
         _onButtonClicked: function (event) {
@@ -55,11 +55,11 @@ odoo.define('base_tier_validation.ReviewField', function (require) {
         },
         _hideCollapse: function () {
             this.$el.find('.panel-heading').removeClass('active');
-        }
+        },
     });
 
     field_registry.add('tier_validation', ReviewField);
 
     return ReviewField;
 
-    });
+});

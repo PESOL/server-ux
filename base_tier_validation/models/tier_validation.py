@@ -38,12 +38,10 @@ class TierValidation(models.AbstractModel):
     )
     can_review = fields.Boolean(compute="_compute_can_review")
 
-    @api.multi
     def _compute_can_review(self):
         for rec in self:
             rec.can_review = self.env.user in rec.reviewer_ids
 
-    @api.multi
     @api.depends("review_ids")
     def _compute_reviewer_ids(self):
         for rec in self:
@@ -71,7 +69,6 @@ class TierValidation(models.AbstractModel):
         )
         return [("id", "in", list(set(reviews.mapped("res_id"))))]
 
-    @api.multi
     def _compute_validated_rejected(self):
         for rec in self:
             rec.validated = self._calc_reviews_validated(rec.review_ids)
@@ -89,7 +86,6 @@ class TierValidation(models.AbstractModel):
         """Override for different rejection policy."""
         return any([s == "rejected" for s in reviews.mapped("status")])
 
-    @api.multi
     def _compute_need_validation(self):
         for rec in self:
             tiers = self.env["tier.definition"].search([("model", "=", self._name)])
@@ -100,7 +96,6 @@ class TierValidation(models.AbstractModel):
                 and getattr(rec, self._state_field) in self._state_from
             )
 
-    @api.multi
     def evaluate_tier(self, tier):
         domain = []
         if tier.definition_domain:
@@ -112,7 +107,6 @@ class TierValidation(models.AbstractModel):
         """Extend for more field exceptions."""
         return ["message_follower_ids"]
 
-    @api.multi
     def _check_allow_write_under_validation(self, vals):
         """Allow to add exceptions for fields that are allowed to be written
         even when the record is under validation."""
@@ -122,11 +116,11 @@ class TierValidation(models.AbstractModel):
                 return False
         return True
 
-    @api.multi
     def write(self, vals):
+        state = self._state_field
         for rec in self:
             if (
-                getattr(rec, self._state_field) in self._state_from
+                getattr(rec, state) in self._state_from
                 and vals.get(self._state_field) in self._state_to
             ):
                 if rec.need_validation:
@@ -178,22 +172,21 @@ class TierValidation(models.AbstractModel):
             rec._notify_accepted_reviews()
 
     def _notify_accepted_reviews(self):
+        post = "message_post"
         if hasattr(self, "message_post"):
             # Notify state change
-            getattr(self, "message_post")(
+            getattr(self, post)(
                 subtype="mt_comment", body=self._notify_accepted_reviews_body()
             )
 
     def _notify_accepted_reviews_body(self):
         return _("A review was accepted")
 
-    @api.multi
     def validate_tier(self):
         for rec in self:
             rec._validate_tier()
         self._update_counter()
 
-    @api.multi
     def reject_tier(self):
         for rec in self:
             user_reviews = rec.review_ids.filtered(
@@ -217,9 +210,10 @@ class TierValidation(models.AbstractModel):
         return _("A review was rejected by %s.") % (self.env.user.name)
 
     def _notify_rejected_review(self):
-        if hasattr(self, "message_post"):
+        post = "message_post"
+        if hasattr(self, post):
             # Notify state change
-            getattr(self, "message_post")(
+            getattr(self, post)(
                 subtype="mt_comment", body=self._notify_rejected_review_body()
             )
 
@@ -228,19 +222,20 @@ class TierValidation(models.AbstractModel):
 
     def _notify_review_requested(self, tier_reviews):
         if hasattr(self, "message_post") and hasattr(self, "message_subscribe"):
+            subscribe = "message_subscribe"
+            post = "message_post"
             for rec in self:
                 users_to_notify = tier_reviews.filtered(
                     lambda r: r.definition_id.notify_on_create and r.res_id == rec.id
                 ).mapped("reviewer_ids")
                 # Subscribe reviewers and notify
-                getattr(rec, "message_subscribe")(
+                getattr(rec, subscribe)(
                     partner_ids=users_to_notify.mapped("partner_id").ids
                 )
-                getattr(rec, "message_post")(
+                getattr(rec, post)(
                     subtype="mt_comment", body=rec._notify_requested_review_body()
                 )
 
-    @api.multi
     def request_validation(self):
         td_obj = self.env["tier.definition"]
         tr_obj = created_trs = self.env["tier.review"]
@@ -267,7 +262,6 @@ class TierValidation(models.AbstractModel):
         self._notify_review_requested(created_trs)
         return created_trs
 
-    @api.multi
     def restart_validation(self):
         for rec in self:
             if getattr(rec, self._state_field) in self._state_from:
