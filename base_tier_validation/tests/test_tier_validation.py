@@ -95,6 +95,7 @@ class TierTierValidation(common.SavepointCase):
         reviews = self.test_record.with_user(self.test_user_2.id).request_validation()
         self.assertTrue(reviews)
         record = self.test_record.with_user(self.test_user_1.id)
+        record._compute_review_ids()
         record.validate_tier()
         self.assertTrue(record.validated)
 

@@ -20,10 +20,9 @@ class TierValidation(models.AbstractModel):
 
     review_ids = fields.One2many(
         comodel_name="tier.review",
-        inverse_name="res_id",
         string="Validations",
         domain=lambda self: [("model", "=", self._name)],
-        auto_join=True,
+        compute='_compute_review_ids'
     )
     validated = fields.Boolean(
         compute="_compute_validated_rejected", search="_search_validated"
@@ -37,6 +36,15 @@ class TierValidation(models.AbstractModel):
         search="_search_reviewer_ids",
     )
     can_review = fields.Boolean(compute="_compute_can_review")
+
+
+    def _compute_review_ids(self):
+        review_obj = self.env['tier.review']
+        for record in self:
+            record.review_ids = review_obj.search([
+                ('model', '=', self._name),
+                ('res_id', '=', record.id)
+            ])
 
     def _compute_can_review(self):
         for rec in self:
